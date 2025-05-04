@@ -114,6 +114,7 @@ int main(const int argc, char **argv) {
     FILE *out = fopen(out_file, "wb");
     if (!out) {
         printf("Failed to open %s for writing!\n", out_file);
+        fclose(file);
         return EXIT_FAILURE;
     }
 
@@ -132,5 +133,7 @@ int main(const int argc, char **argv) {
             write_utf8(out, (int) unicode);
         }
     }
+    fclose(file);
+    fclose(out);
     return EXIT_SUCCESS;
 }
