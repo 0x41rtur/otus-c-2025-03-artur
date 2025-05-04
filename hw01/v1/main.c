@@ -71,8 +71,8 @@ void write_utf8(FILE *out, const int unicode) {
     // 2 байта: 110xxxxx 10yyyyyy
     if (unicode <= 0x7FF) {
         uint8_t utf8[2];
-        utf8[0] = 0xC0 | ((unicode >> 6) & 0x1F);    // страшие 5 бит 110xxxxx
-        utf8[1] = 0x80 | (unicode & 0x3F);           // младшие 6 бит 10yyyyyy
+        utf8[0] = 0xC0 | ((unicode >> 6) & 0x1F);    // страшие 5 бит + помечаем 110xxxxx
+        utf8[1] = 0x80 | (unicode & 0x3F);           // младшие 6 бит + помечаем 10yyyyyy
         fwrite(utf8, 1, 2, out);
         return;
     }
