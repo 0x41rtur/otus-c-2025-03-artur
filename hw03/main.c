@@ -25,7 +25,7 @@ typedef struct list {
 list *add_element(const long data, list *head) {
   list *l = malloc(sizeof(list));
   if (l == NULL) {
-    // abort ?? abort()
+    // abort
     return NULL;
   }
   l->data = data;
@@ -35,7 +35,7 @@ list *add_element(const long data, list *head) {
 
 int main() {
   list *head = NULL;
-  int i = data_length;
+  int i = data_length - 1;
 
   // adding_loop
   while (i != 0) {
@@ -46,7 +46,7 @@ int main() {
   // печать
   const list *cur = head;
   while (cur) {
-    printf(int_format, cur->data);
+    print_int(cur->data);
     cur = cur->next;
   }
   puts(empty_str);
@@ -55,23 +55,23 @@ int main() {
   // список
   cur = head;
   // акумулятор
-  list *liltered = NULL;
+  list *odd_list = NULL;
   while (cur) {
-    // предикат
+    // предикат в оригинале как функция высшего порядка в filter
     if (cur->data % 2 == 1) {
-      liltered = add_element(cur->data, liltered);
+      odd_list = add_element(cur->data, odd_list);
     }
     cur = cur->next;
   }
 
   // печать
-  while (liltered) {
-    printf(int_format, liltered->data);
-    liltered = liltered->next;
+  while (odd_list) {
+    print_int(odd_list->data);
+    odd_list = odd_list->next;
   }
   puts(empty_str);
 
-  // без надобности но все же
+  // все же
   while (head) {
     const list *tmp = head;
     free(head);
