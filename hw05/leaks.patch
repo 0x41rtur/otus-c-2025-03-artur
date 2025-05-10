@@ -1,0 +1,130 @@
+diff --git a/src/common/clib-package.c b/src/common/clib-package.c
+index 268538e..f595f7d 100644
+--- a/src/common/clib-package.c
++++ b/src/common/clib-package.c
+@@ -380,6 +380,8 @@ static inline int install_packages(list_t *list, const char *dir, int verbose) {
+   loop_cleanup:
+     if (slug)
+       free(slug);
++    if (error && pkg)
++      clib_package_free(pkg);
+     if (error) {
+       list_iterator_destroy(iterator);
+       iterator = NULL;
+@@ -393,6 +395,7 @@ static inline int install_packages(list_t *list, const char *dir, int verbose) {
+ cleanup:
+   if (iterator)
+     list_iterator_destroy(iterator);
++
+   iterator = list_iterator_new(freelist, LIST_HEAD);
+   while ((node = list_iterator_next(iterator))) {
+     clib_package_t *pkg = node->val;
+@@ -430,6 +433,12 @@ static void init_curl_share() {
+     pthread_mutex_unlock(&lock.mutex);
+   }
+ }
++
++static void free_curl_share() {
++  if (NULL != clib_package_curl_share) {
++    curl_share_cleanup(clib_package_curl_share);
++  }
++}
+ #endif
+ 
+ /**
+@@ -658,14 +667,19 @@ clib_package_new_from_slug_with_package_name(const char *slug, int verbose,
+       init_curl_share();
+       _debug("GET %s", json_url);
+       res = http_get_shared(json_url, clib_package_curl_share);
++      free_curl_share();
+ #else
+       res = http_get(json_url);
+ #endif
+-      json = res->data;
+-      _debug("status: %d", res->status);
+       if (!res || !res->ok) {
++        if (res) {
++          http_get_free(res);
++          res = NULL;
++        }
+         goto download;
+       }
++      json = res->data;
++      _debug("status: %d", res->status);
+       log = "fetch";
+     }
+   }
+@@ -779,6 +793,7 @@ error:
+     http_get_free(res);
+   if (pkg)
+     clib_package_free(pkg);
++
+   return NULL;
+ }
+ 
+@@ -948,9 +963,12 @@ static int fetch_package_file_work(clib_package_t *pkg, const char *dir,
+ 
+ #ifdef HAVE_PTHREADS
+     pthread_mutex_unlock(&lock.mutex);
++    init_curl_share();
+ #endif
+-
+     rc = http_get_file_shared(url, path, clib_package_curl_share);
++#ifdef HAVE_PTHREADS
++    free_curl_share();
++#endif
+     saved = 1;
+   } else {
+ #ifdef HAVE_PTHREADS
+@@ -987,9 +1005,11 @@ static int fetch_package_file_work(clib_package_t *pkg, const char *dir,
+   }
+ 
+ cleanup:
+-
+   free(url);
+   free(path);
++#ifdef HAVE_PTHREADS
++  free_curl_share();
++#endif
+   return rc;
+ }
+ 
+@@ -1120,7 +1140,13 @@ int clib_package_install_executable(clib_package_t *pkg, char *dir,
+ 
+   E_FORMAT(&tarball, "%s/%s", tmp, file);
+ 
++#ifdef HAVE_PTHREADS
++  init_curl_share();
++#endif
+   rc = http_get_file_shared(url, tarball, clib_package_curl_share);
++#ifdef HAVE_PTHREADS
++  free_curl_share();
++#endif
+ 
+   if (0 != rc) {
+     if (verbose) {
+@@ -1227,6 +1253,9 @@ cleanup:
+   free(tarball);
+   free(file);
+   free(url);
++#ifdef HAVE_PTHREADS
++  free_curl_share();
++#endif
+   return rc;
+ }
+ 
+@@ -1589,12 +1618,8 @@ cleanup:
+   if (command)
+     free(command);
+ #ifdef HAVE_PTHREADS
+-  if (NULL != pkg && NULL != pkg->src) {
+-    if (pkg->src->len > 0) {
+-      if (fetchs) {
+-        free(fetchs);
+-      }
+-    }
++  if (fetchs) {
++    free(fetchs);
+   }
+   fetchs = NULL;
+ #endif
